@@ -1,5 +1,5 @@
 
-use valde::bucket_keeper::BucketKeeper;
+use valde::bucket_keeper::{BucketKeeper, BucketDefinition};
 use std::thread;
 use std::io::prelude::*;
 use std::time::Duration; 
@@ -7,7 +7,7 @@ use std::sync::{Arc, Mutex};
 use std::net::{TcpListener, TcpStream};
 
 fn main() {
-    let keeper_arc = Arc::new(Mutex::new(BucketKeeper::new(10)));
+    let keeper_arc = Arc::new(Mutex::new(BucketKeeper::new(vec![BucketDefinition::new("foo", 10)])));
     
     let keeper = Arc::clone(&keeper_arc);
     thread::spawn(move || {
@@ -15,8 +15,8 @@ fn main() {
             thread::sleep(Duration::from_millis(1000));
             let mut keeper = keeper.lock().unwrap();
             println!("Refilling Bucket...");
-            keeper.refill();
-            println!("[Refill] Tokens left: {}", keeper.get_available_tokens());
+            keeper.refill("foo");
+            println!("[Refill] Tokens left: {}", keeper.get_available_tokens("foo"));
 
         }
   

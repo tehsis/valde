@@ -1,50 +1,102 @@
 
-    use crate::bucket::{Bucket, Response};
+use crate::bucket::*;
+use std::collections::HashMap;
 
-    pub struct BucketKeeper {
-        current_bucket: Bucket
+pub struct BucketKeeper {
+    buckets: HashMap<String, Bucket>
+}
+
+pub struct BucketDefinition {
+    name: String,
+    max: i32
+}
+
+impl BucketDefinition {
+    pub fn new(name: &str, max: i32) -> BucketDefinition {
+        BucketDefinition{
+            name: String::from(name),
+            max
+        }
+    }
+}
+
+impl BucketKeeper {
+    pub fn new(buckets: Vec<BucketDefinition>) -> BucketKeeper {
+        let mut buckets_hash_map = HashMap::new();
+        buckets
+            .into_iter()
+            .for_each(|bucket_definition| {
+                buckets_hash_map.insert(bucket_definition.name, Bucket::new(bucket_definition.max));                
+            }); 
+        BucketKeeper{
+            buckets: buckets_hash_map
+        }
     }
 
-    impl BucketKeeper {
-        pub fn new(max: i32) -> BucketKeeper {
-            let bucket = Bucket::new(max);
-            BucketKeeper{
-                current_bucket: bucket
+    pub fn refill(&mut self, bucket_name: &str) {
+        let bucket = self.buckets.get(bucket_name).clone();
+        match bucket {
+            Some(bucket) => {
+                let new_bucket = bucket.refill();
+                self.buckets.insert(String::from(bucket_name), new_bucket);
             }
+            None => {}
         }
+    }
 
-        pub fn refill(&mut self) {
-            self.current_bucket = self.current_bucket.refill();
-        }
-
-        pub fn take(&mut self) -> bool {
-            match self.current_bucket.take() {
-                Response::Yes(new_bucket) => {
-                    self.current_bucket = new_bucket;
-                    true
-                },
-                Response::No => {
-                    false
+    pub fn take(&mut self, bucket_name: &str) -> bool {
+            match self.buckets.get(bucket_name) {
+            Some(bucket) => {
+                match bucket.take() {
+                    Some(new_bucket) => {
+                        self.buckets.insert(String::from(bucket_name), new_bucket);
+                        true
+                    },
+                    None => {
+                        false
+                    }
                 }
             }
+            None => {
+                false
+            }
         }
+    }
 
-        pub fn get_available_tokens(&self) -> i32 {
-            return self.current_bucket.current_token_amount;
+    pub fn get_available_tokens(&self, bucket_name: &str) -> i32 {
+        match self.buckets.get(bucket_name) {
+            Some(bucket) => {
+                bucket.current_token_amount
+            },
+            None => {
+                0
+            }
         }
     }
+}
 
-    #[test]
-    fn it_should_take_tokens() {
-        let mut keeper = BucketKeeper::new(10);
-        keeper.take();
-        assert!(keeper.current_bucket.current_token_amount == 9);
-    }
+#[test]
+fn it_should_take_tokens_from_a_bucket() {
+    let mut keeper = BucketKeeper::new(vec![BucketDefinition{
+        name: String::from("foo"),
+        max: 10
+    }, BucketDefinition{
+        name: String::from("bar"),
+        max: 5
+    }]);
+    keeper.take("foo");
+    keeper.take("bar");
+    assert!(keeper.get_available_tokens("foo") == 9);
+    assert!(keeper.get_available_tokens("bar") == 4);
+}
 
-    #[test]
-    fn it_shoul_refill_tokens() {
-        let mut keeper = BucketKeeper::new(10);
-        keeper.take();
-        keeper.refill();
-        assert!(keeper.current_bucket.current_token_amount == 10);
-    }
+#[test]
+fn it_shoul_refill_tokens() {
+    let mut keeper = BucketKeeper::new(vec![BucketDefinition{
+        name: String::from("foo"),
+        max: 10
+    }]);   
+    keeper.take("foo");
+    keeper.refill("foo");
+    assert!(keeper.get_available_tokens("foo") == 10);
+}
