@@ -4,11 +4,12 @@ pub trait Refiller {
 
 pub trait Taker where Self: Sized {
     fn take(&self) -> Option<Self>;
+    fn current(&self) -> i32;
 }
 
 pub struct Bucket {
-    pub max_token_amount: i32,
-    pub current_token_amount: i32
+    max_token_amount: i32,
+    current_token_amount: i32
 }
 
 impl Bucket {
@@ -36,6 +37,10 @@ impl Taker for Bucket {
         } else {
             None
         }
+    }
+
+    fn current(&self) -> i32 {
+        return self.current_token_amount;
     }
 }
 

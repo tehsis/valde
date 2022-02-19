@@ -2,8 +2,8 @@
 use crate::bucket::*;
 use std::collections::HashMap;
 
-pub struct BucketKeeper {
-    buckets: HashMap<String, Bucket>
+pub struct BucketKeeper<T: Refiller + Taker> {
+    buckets: HashMap<String, T>
 }
 
 pub struct BucketDefinition {
@@ -20,8 +20,8 @@ impl BucketDefinition {
     }
 }
 
-impl BucketKeeper {
-    pub fn new(buckets: Vec<BucketDefinition>) -> BucketKeeper {
+impl BucketKeeper<Bucket> {
+    pub fn new(buckets: Vec<BucketDefinition>) -> BucketKeeper<Bucket> {
         let mut buckets_hash_map = HashMap::new();
         buckets
             .into_iter()
@@ -32,7 +32,9 @@ impl BucketKeeper {
             buckets: buckets_hash_map
         }
     }
+}
 
+impl<T> BucketKeeper<T> where T: Refiller + Taker {
     pub fn refill(&mut self, bucket_name: &str) {
         let bucket = self.buckets.get(bucket_name).clone();
         match bucket {
@@ -66,7 +68,7 @@ impl BucketKeeper {
     pub fn get_available_tokens(&self, bucket_name: &str) -> i32 {
         match self.buckets.get(bucket_name) {
             Some(bucket) => {
-                bucket.current_token_amount
+                bucket.current()
             },
             None => {
                 0

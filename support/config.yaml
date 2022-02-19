@@ -1,0 +1,7 @@
+buckets:
+  - bucket:
+      name: "foo"
+      max: 10
+  - bucket:
+      name: "bar"
+      max: 5
